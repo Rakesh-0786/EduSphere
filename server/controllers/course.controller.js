@@ -1,9 +1,65 @@
 import AppError from "../utils/error.util.js";
 import Course from "../models/course.model.js";
 
-const getAllCourses = async (req, res, next) => {
+// create and Store courses
+const storeCourses = async (req, res, next) => {
+  const {
+    title,
+    description,
+    category,
+    thumbnail,
+    lectures = [],
+    numberOfLectures,
+    createdBy,
+  } = req.body;
+
+  if (
+    !title ||
+    !description ||
+    !category ||
+    !thumbnail ||
+    !numberOfLectures ||
+    !createdBy
+  ) {
+    console.error("Missing field(s) in request body:", req.body);
+    return next(new AppError("All fields are required", 400));
+  }
+
   try {
-    const courses = await Course.find({}).select(`-lectures`);
+    // Check if the course with the same title already exists
+    const courseExists = await Course.findOne({ title });
+    if (courseExists) {
+      console.error("Course title already exists:", title);
+      return next(new AppError("Course title already exists", 400));
+    }
+
+    // Create the new course
+    const course = await Course.create({
+      title,
+      description,
+      category,
+      thumbnail,
+      lectures,
+      numberOfLectures,
+      createdBy,
+    });
+
+    console.log("Course created successfully:", course);
+
+    res.status(201).json({
+      success: true,
+      message: "Course created successfully",
+      course,
+    });
+  } catch (e) {
+    console.error("Error creating course:", e);
+    return next(new AppError(e.message, 500));
+  }
+};
+
+const getAllCourses = async function (req, res, next) {
+  try {
+    const courses = await Course.find({}).select("-lectures");
 
     res.status(200).json({
       success: true,
@@ -15,24 +71,25 @@ const getAllCourses = async (req, res, next) => {
   }
 };
 
-// get specific course
-const getLecturesByCourseId = async (req, res, next) => {
+const getLecturesByCourseId = async function (req, res, next) {
   try {
     const { id } = req.params;
-
+    console.log("Course Id >", id);
     const course = await Course.findById(id);
+    console.log("Course Details >", course);
+
     if (!course) {
-      return next(new AppError("course not found", 500));
+      return next(new AppError("Invalid Course id", 400));
     }
 
     res.status(200).json({
       success: true,
-      message: "course",
-      course,
+      message: "Course Lectures fetched successfully",
+      lectures: course.lectures,
     });
   } catch (e) {
     return next(new AppError(e.message, 500));
   }
 };
 
-export { getAllCourses, getLecturesByCourseId };
+export { storeCourses, getAllCourses, getLecturesByCourseId };
