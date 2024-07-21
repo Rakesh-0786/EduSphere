@@ -189,6 +189,103 @@ const removeCourse = async (req, res, next) => {
   }
 };
 
+const addLectureToCourseById = async (req, res, next) => {
+  try {
+    const { title, description } = req.body;
+    const { id } = req.params;
+
+    if (!title || !description) {
+      return next(new AppError('All fields are required', 400));
+    }
+
+    const course = await Course.findById(id);
+
+    if (!course) {
+      return next(new AppError('Course with given id does not exist', 500));
+    }
+
+    const lectureData = {
+      title,
+      description,
+      lecture:{}
+    };
+
+    if (req.file) {
+      try {
+        const result = await cloudinary.v2.uploader.upload(req.file.path, {
+          folder: "EduSphere",
+        });
+
+        if (result) {
+          lectureData.lecture = {
+            public_id: result.public_id,
+            secure_url: result.secure_url,
+          };
+        }
+        fs.rm(`uploads/${req.file.filename}`);
+      } catch (e) {
+        return next(new AppError(e.message, 500));
+      }
+    }
+     console.log('lecture >', JSON.stringify(lectureData));
+    // Push new lecture into the lectures array
+    course.lectures.push(lectureData);
+    course.numberOfLectures = course.lectures.length;
+
+    await course.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Lecture successfully added to the course',
+      course,
+    });
+  } catch (error) {
+    return next(new AppError(error.message, 500));
+  }
+};
+
+// deleting lecture from course 
+
+const deleteLectureFromCourseById = async (req, res, next) => {
+  const { courseId, lectureId } = req.params;
+
+  try {
+    const course = await Course.findById(courseId);
+
+    if (!course) {
+      return next(new AppError('Course with given id does not exist', 500));
+    }
+
+    const lectureIndex = course.lectures.findIndex(
+      (lecture) => lecture._id.toString() === lectureId
+    );
+
+    if (lectureIndex === -1) {
+      return next(new AppError('Lecture with given id does not exist', 500));
+    }
+
+    const lecture = course.lectures[lectureIndex];
+
+    if (lecture.lecture && lecture.lecture.public_id) {
+      await cloudinary.v2.uploader.destroy(lecture.lecture.public_id);
+    }
+
+    course.lectures.splice(lectureIndex, 1);
+    course.numberOfLectures = course.lectures.length;
+    await course.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Lecture successfully deleted from the course',
+      course
+    });
+
+  } catch (error) {
+    return next(new AppError(error.message, 500));
+  }
+};
+
+
 export {
   storeCourses,
   getAllCourses,
@@ -196,4 +293,6 @@ export {
   createCourse,
   updateCourse,
   removeCourse,
+  addLectureToCourseById,
+  deleteLectureFromCourseById
 };
