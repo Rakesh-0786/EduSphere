@@ -96,122 +96,104 @@ const getLecturesByCourseId = async function (req, res, next) {
 
 const createCourse = async (req, res, next) => {
   try {
-      const { title, description, category, createdBy } = req.body;
+    const { title, description, category, createdBy } = req.body;
 
-      if (!title || !description || !category || !createdBy) {
-          return next(new AppError('All fields are required', 400));
+    if (!title || !description || !category || !createdBy) {
+      return next(new AppError("All fields are required", 400));
+    }
+
+    const course = await Course.create({
+      title,
+      description,
+      category,
+      createdBy,
+    });
+
+    if (!course) {
+      return next(
+        new AppError("Course could not created, please try again", 500)
+      );
+    }
+
+    // file upload
+    if (req.file) {
+      const result = await cloudinary.v2.uploader.upload(req.file.path, {
+        folder: "EduSphere",
+      });
+      console.log(JSON.stringify(result));
+
+      if (result) {
+        course.thumbnail.public_id = result.public_id;
+        course.thumbnail.secure_url = result.secure_url;
       }
 
-      const course = await Course.create({
-          title,
-          description,
-          category,
-          createdBy
-      })
+      fs.rm(`uploads/${req.file.filename}`);
+    }
 
-      if (!course) {
-          return next(new AppError('Course could not created, please try again', 500));
-      }
+    await course.save();
 
-      // file upload
-      if (req.file) {
-          const result = await cloudinary.v2.uploader.upload(req.file.path, {
-              folder: 'EduSphere'
-          })
-          console.log(JSON.stringify(result));
-
-          if (result) {
-              course.thumbnail.public_id = result.public_id;
-              course.thumbnail.secure_url = result.secure_url;
-          }
-
-          fs.rm(`uploads/${req.file.filename}`);
-      }
-
-      await course.save();
-
-      res.status(200).json({
-          success: true,
-          message: 'Course successfully created',
-          course
-      })
-
+    res.status(200).json({
+      success: true,
+      message: "Course successfully created",
+      course,
+    });
   } catch (e) {
-      return next(new AppError(e.message, 500));
+    return next(new AppError(e.message, 500));
   }
-}
+};
 
-
-
-
-const updateCourse= async (req,res,next)=>{
-  try{
-    const {id}= req.params;
-    const course= await Course.findByIdAndUpdate(
-      id, 
+const updateCourse = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const course = await Course.findByIdAndUpdate(
+      id,
       {
-        $set:req.body
+        $set: req.body,
       },
       {
-        runValidators:true
+        runValidators: true,
       }
     );
 
-    if(!course) {
-      return next(
-        new AppError("Course with given id does not exist",500)
-      )
+    if (!course) {
+      return next(new AppError("Course with given id does not exist", 500));
     }
 
     res.status(200).json({
-      success:true,
-      message:"Course update succesfully",
-      course
-    })
-  }catch(e){
-    return next(
-      new AppError(e.message, 500)
-    )
+      success: true,
+      message: "Course update succesfully",
+      course,
+    });
+  } catch (e) {
+    return next(new AppError(e.message, 500));
   }
+};
 
-}
-
-const removeCourse= async (req,res,next)=>{
-  try{
-    const {id}= req.params;
+const removeCourse = async (req, res, next) => {
+  try {
+    const { id } = req.params;
     const course = await Course.findById(id);
 
-    if(!course) {
-      return next(
-        new AppError('Course with given id does not exist', 500)
-      )
+    if (!course) {
+      return next(new AppError("Course with given id does not exist", 500));
     }
 
     await Course.findByIdAndDelete(id);
 
     res.status(200).json({
-      success:true,
-      course:'Course deleted successfully'
-    })
-  }catch(e){
-    return next(
-      new AppError(e.message, 500)
-    )
+      success: true,
+      course: "Course deleted successfully",
+    });
+  } catch (e) {
+    return next(new AppError(e.message, 500));
   }
-
-}
-
-
-
-
-
-export {
-   storeCourses,
-    getAllCourses, 
-    getLecturesByCourseId,
-    createCourse,
-  updateCourse,
-removeCourse 
 };
 
-
+export {
+  storeCourses,
+  getAllCourses,
+  getLecturesByCourseId,
+  createCourse,
+  updateCourse,
+  removeCourse,
+};
