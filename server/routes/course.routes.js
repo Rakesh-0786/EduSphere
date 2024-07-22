@@ -9,7 +9,7 @@ import {
   updateCourse,
   deleteLectureFromCourseById // Added import for deleteLecture function
 } from "../controllers/course.controller.js";
-import isLoggedIn from "../middlewares/auth.middleware.js";
+import isLoggedIn, { authorizeSubscribers } from "../middlewares/auth.middleware.js";
 import upload from "../middlewares/multer.middleware.js";
 import authorizedRoles from "../middlewares/Authorize.middleware.js";
 
@@ -30,7 +30,7 @@ router
 // if the user is loggedin then that user can see the lectures
 router
   .route("/:id")
-  .get(isLoggedIn, getLecturesByCourseId)
+  .get(isLoggedIn,authorizeSubscribers, getLecturesByCourseId)
   .put(isLoggedIn, authorizedRoles("ADMIN"), updateCourse)
   .delete(isLoggedIn, authorizedRoles("ADMIN"), removeCourse)
   .post(isLoggedIn, authorizedRoles('ADMIN'), upload.single('lecture'), addLectureToCourseById);

@@ -5,6 +5,7 @@ import { config } from "dotenv";
 import morgan from "morgan";
 import userRoutes from "./routes/user.routes.js";
 import courseRoutes from "./routes/course.routes.js";
+import paymentRoutes from "./routes/payment.routes.js";
 import errorMiddleware from "./middlewares/error.middleware.js";
 import dotenv from "dotenv";
 
@@ -34,6 +35,7 @@ app.use("/ping", (req, res) => {
 
 app.use("/api/v1/user", userRoutes);
 app.use("/api/v1/courses", courseRoutes);
+app.use("/api/v1/payments", paymentRoutes);
 
 app.all("*", (req, res) => {
   res.status(400).send("OOPS!! 404 page not found");
